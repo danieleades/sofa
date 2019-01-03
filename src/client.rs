@@ -1,13 +1,12 @@
-use std::collections::HashMap;
-use std::time::Duration;
 use failure::Error;
 use serde_json::from_reader;
+use std::{collections::HashMap, time::Duration};
 
-use reqwest::{self, Url, Method, RequestBuilder, StatusCode};
+use reqwest::{self, Method, RequestBuilder, StatusCode, Url};
 
-use ::database::*;
-use ::types::*;
-use ::error::SofaError;
+use database::*;
+use error::SofaError;
+use types::*;
 
 /// Client handles the URI manipulation logic and the HTTP calls to the CouchDB REST API.
 /// It is also responsible for the creation/access/destruction of databases.
@@ -18,7 +17,10 @@ pub struct Client {
     _gzip: bool,
     _timeout: u8,
     pub uri: String,
-    pub db_prefix: String
+    pub db_prefix: String,
+
+    // (username, password)
+    credentials: Option<(String, Option<String>)>,
 }
 
 impl Client {
@@ -34,8 +36,14 @@ impl Client {
             _gzip: true,
             _timeout: 4,
             dbs: Vec::new(),
-            db_prefix: String::new()
+            db_prefix: String::new(),
+            credentials: None,
         })
+    }
+
+    pub fn with_basic_auth<S: Into<String>>(mut self, username: S, password: Option<S>) -> Self {
+        self.credentials = Some((username.into(), password.map(S::into)));
+        self
     }
 
     fn create_client(&self) -> Result<reqwest::Client, Error> {
@@ -93,7 +101,9 @@ impl Client {
 
         let path = self.create_path(name, None)?;
 
-        let head_response = self._client.head(&path)
+        let head_response = self
+            ._client
+            .head(&path)
             .header(reqwest::header::ContentType::json())
             .send()?;
 
@@ -110,7 +120,9 @@ impl Client {
 
         let path = self.create_path(name, None)?;
 
-        let put_response = self._client.put(&path)
+        let put_response = self
+            ._client
+            .put(&path)
             .header(reqwest::header::ContentType::json())
             .send()?;
 
@@ -127,7 +139,9 @@ impl Client {
 
     pub fn destroy_db(&self, dbname: &'static str) -> Result<bool, Error> {
         let path = self.create_path(self.build_dbname(dbname), None)?;
-        let response = self._client.delete(&path)
+        let response = self
+            ._client
+            .delete(&path)
             .header(reqwest::header::ContentType::json())
             .send()?;
 
@@ -137,7 +151,9 @@ impl Client {
     }
 
     pub fn check_status(&self) -> Result<CouchStatus, Error> {
-        let response = self._client.get(&self.uri)
+        let response = self
+            ._client
+            .get(&self.uri)
             .header(reqwest::header::ContentType::json())
             .send()?;
 
@@ -146,11 +162,8 @@ impl Client {
         Ok(status)
     }
 
-    fn create_path(&self,
-        path: String,
-        args: Option<HashMap<String, String>>
-    ) -> Result<String, Error> {
-        let mut uri = Url::parse(&self.uri)?.join(&path)?;
+    fn create_path<S: AsRef<str>>(&self, path: S, args: Option<HashMap<String, String>>) -> Result<String, Error> {
+        let mut uri = Url::parse(&self.uri)?.join(path.as_ref())?;
 
         if let Some(ref map) = args {
             let mut qp = uri.query_pairs_mut();
@@ -162,15 +175,20 @@ impl Client {
         Ok(uri.into_string())
     }
 
-    pub fn req(&self,
+    pub fn req<S: AsRef<str>>(
+        &self,
         method: Method,
-        path: String,
-        opts: Option<HashMap<String, String>>
+        path: S,
+        opts: Option<HashMap<String, String>>,
     ) -> Result<RequestBuilder, Error> {
         let uri = self.create_path(path, opts)?;
         let mut req = self._client.request(method, &uri);
         req.header(reqwest::header::Referer::new(uri.clone()));
         req.header(reqwest::header::ContentType::json());
+
+        if let Some((ref username, ref password)) = self.credentials {
+            req.basic_auth(username.clone(), password.clone());
+        }
 
         Ok(req)
     }
@@ -195,7 +213,11 @@ impl Client {
         Ok(self.req(Method::Head, path, args)?)
     }
 
-    pub fn delete(&self, path: String, args: Option<HashMap<String, String>>) -> Result<RequestBuilder, Error> {
+    pub fn delete<S: AsRef<str>>(
+        &self,
+        path: S,
+        args: Option<HashMap<String, String>>,
+    ) -> Result<RequestBuilder, Error> {
         Ok(self.req(Method::Delete, path, args)?)
     }
 }
