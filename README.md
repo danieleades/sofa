@@ -1,6 +1,17 @@
+# *#DEPRECATED#*
+I'm not going to maintain or extend this libary, but rather create a new one instead that is-
+- ergonomic
+- both sync and async
+- not riddled with unwraps and stringly typed apis
+
+meet [Chesterfield](https://github.com/danieleades/chesterfield)!
+
+---
+
 # Sofa - CouchDB for Rust
 
-[![Crates.io](https://img.shields.io/crates/v/sofa.svg)](https://crates.io/crates/sofa)[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FYellowInnovation%2Fsofa.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FYellowInnovation%2Fsofa?ref=badge_shield)
+[![Crates.io](https://img.shields.io/crates/v/sofa.svg)](https://crates.io/crates/sofa)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FYellowInnovation%2Fsofa.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FYellowInnovation%2Fsofa?ref=badge_shield)
 
 [![docs.rs](https://docs.rs/sofa/badge.svg)](https://docs.rs/sofa)
 
